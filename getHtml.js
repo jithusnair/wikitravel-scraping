@@ -16,7 +16,7 @@ export async function getEverythingElse() {
     let arr = [];
     let finalCSVArr = [];
     // get the intro paragaraph first
-    let introParaArr = $('.noprint').nextUntil('h2', 'p').toArray().map(elem => elem.outerHTML);
+    let introParaArr = $('.noprint').nextUntil('h2', ':not(div)').toArray().map(elem => elem.outerHTML);
     arr.push(introParaArr.join(''));
     // get each paragraphs by navIds fetched above
     /* 
@@ -25,19 +25,31 @@ export async function getEverythingElse() {
     won't cross 64,000 characters
     */
     for (let i = 0; i < ids.length; i++) {
-      let district = $(ids[i]).parent();
-      let html1 = district.prop('outerHTML');
-      let arr1 = $(district).nextUntil('h2').toArray().map(elem => elem.outerHTML);
-      let html2 = arr1.join('');
+      let h1Tag = $(ids[i]).parent();
+      let html1 = h1Tag.prop('outerHTML');
       arr.push(html1);
-      arr.push(html2);
-      if((i+1)%2 === 0) {
-        finalCSVArr.push(arr.join(''));
-        arr = [];
-      } else if((i+1) === ids.length) {
-        finalCSVArr.push(arr.join(''));
-        arr = [];
+      let arr1 = $(h1Tag).nextUntil('h2').toArray();
+      for (let j = 0; j < arr1.length; j++) {
+        arr.push(arr1[j].outerHTML);
+        if(arr.join('').length > 60000) {
+          let temp = arr.pop();
+          finalCSVArr.push(arr.join(''));
+          arr = [temp];
+        }
       }
+      // let html2 = arr1.join('');
+      // arr.push(html2);
+      // if((i+1)%3 === 0) {
+      //   finalCSVArr.push(arr.join(''));
+      //   arr = [];
+      // } else if((i+1) === ids.length) {
+      //   finalCSVArr.push(arr.join(''));
+      //   arr = [];
+      // }
+      
+    }
+    if(arr.length !== 0) {
+      finalCSVArr.push(arr.join(''));
     }
     return finalCSVArr;
   } catch (error) {

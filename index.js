@@ -24,8 +24,10 @@ let links = [
   const page = await context.newPage();
   
   let csvArr = await caspioCsv(page, links)
-  //make a Caspio supported CSV 
+
+  //make a csv file that can be imported into Caspio 
   await writeCSV(csvArr);
+
   setTimeout(async ()=> {
     await browser.close();
   }, 60000);
@@ -33,6 +35,7 @@ let links = [
 
 async function caspioCsv(page, links) {
   let csvArray = []
+
   for (let i = 0; i < links.length; i++) {    
     await page.goto(links[i]);
 
@@ -47,10 +50,11 @@ async function caspioCsv(page, links) {
     // get the core html as arrays
     let htmlArr = await getHTML(page);
 
-    writeHTMLFile(htmlArr);
+    // writeHTMLFile(htmlArr);
 
     // convert to object to work with 'objects-to-csv' package
     let objectifiedArr = objectifyArrForCSV(htmlArr);
+
     csvArray.push(objectifiedArr);
   }
   return csvArray;
@@ -63,11 +67,17 @@ async function cleanUp(page) {
 
 async function getHTML(page) {
   let pageHTMLArray = [];
+  // first get the nav
   pageHTMLArray.push(await page.evaluate(getNav));
+  // then get the other contents
   pageHTMLArray = pageHTMLArray.concat(await page.evaluate(getEverythingElse));
+
+  // if some pages only have 4 arrays after dividing html into 60,000 character
+  // chunks, just add one more empty chunk. Just for uniformity in number of columns
   if(pageHTMLArray.length < 5) {
     pageHTMLArray.push('');
   }
+
   return pageHTMLArray;
 }
 
@@ -141,9 +151,7 @@ function objectifyArrForCSV(arr) {
   };
 }
 
-async function writeCSV(obj) {
-  
-  let arrOfObj = [obj];
+async function writeCSV(arrOfObj) {
   const csv = new objectsToCSV(arrOfObj);
   await csv.toDisk('./city.csv');
 }

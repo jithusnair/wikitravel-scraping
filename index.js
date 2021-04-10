@@ -1,20 +1,20 @@
 import fs from 'fs';
 import { chromium } from "playwright";
 import objectsToCSV from 'objects-to-csv';
-import {remove, convertLinkToText} from './cleanUp.js';
-import {getEverythingElse, getNav} from './getHtml.js';
+import {remove, convertLinkToText} from './wikivoyage/cleanUp.js';
+import {getEverythingElse, getNav} from './wikivoyage/getHtml.js';
 
 let links = [
-  'https://wikitravel.org/en/Paris',
-  // 'https://wikitravel.org/en/London',
-  // 'https://wikitravel.org/en/Edinburgh',
-  // 'https://wikitravel.org/en/Dublin',
-  // 'https://wikitravel.org/en/Prague',
-  // 'https://wikitravel.org/en/Rome',
-  // 'https://wikitravel.org/en/Milan',
-  // 'https://wikitravel.org/en/Venice',
-  // 'https://wikitravel.org/en/Florence',
-  // 'https://wikitravel.org/en/Vienna',
+  {url: 'https://wikivoyage.org/wiki/Paris', city: 'Paris'},
+  // {url: 'https://wikivoyage.org/wiki/London', city: 'London'},
+  // {url: 'https://wikivoyage.org/wiki/Edinburgh', city: 'Edinburgh'},
+  // {url: 'https://wikivoyage.org/wiki/Dublin', city: 'Dublin'},
+  // {url: 'https://wikivoyage.org/wiki/Prague', city: 'Prague'},
+  // {url: 'https://wikivoyage.org/wiki/Rome', city: 'Rome'},
+  // {url: 'https://wikivoyage.org/wiki/Milan', city: 'Milan'},
+  // {url: 'https://wikivoyage.org/wiki/Venice', city: 'Venice'},
+  // {url: 'https://wikivoyage.org/wiki/Florence', city: 'Florence'},
+  // {url: 'https://wikivoyage.org/wiki/Vienna', city: 'Vienna'},
 ];
 
 (async () => {
@@ -37,12 +37,17 @@ async function caspioCsv(page, links) {
   let csvArray = []
 
   for (let i = 0; i < links.length; i++) {    
-    await page.goto(links[i]);
+    await page.goto(links[i].url);
 
     // wait for scripts to execute 
     // (css classes/ids seem to change after scripts are loaded, hence the wait)
-    await page.waitForSelector("#toc ul.tocUl>li>a");
-    await page.waitForSelector("#omid_v1_present", {state:"hidden"});
+    // await page.waitForSelector("#toc ul.tocUl>li>a");
+    try {
+      await page.waitForSelector(".routeBox", {timeout: 10000});
+    } catch (error) {
+      console.error(error);
+    }
+    // await page.waitForSelector("#omid_v1_present", {state:"hidden"});
 
     // remove pictures, replace anchor tags with textcontent etc.
     await cleanUp(page);
@@ -50,10 +55,10 @@ async function caspioCsv(page, links) {
     // get the core html as arrays
     let htmlArr = await getHTML(page);
 
-    // writeHTMLFile(htmlArr);
+    writeHTMLFile(htmlArr);
 
     // convert to object to work with 'objects-to-csv' package
-    let objectifiedArr = objectifyArrForCSV(htmlArr);
+    let objectifiedArr = objectifyArrForCSV(htmlArr, links[i].city);
 
     csvArray.push(objectifiedArr);
   }
@@ -74,8 +79,10 @@ async function getHTML(page) {
 
   // if some pages only have 4 arrays after dividing html into 60,000 character
   // chunks, just add one more empty chunk. Just for uniformity in number of columns
-  if(pageHTMLArray.length < 5) {
-    pageHTMLArray.push('');
+  if(pageHTMLArray.length < 6) {
+    for (let i = pageHTMLArray.length; i < 6; i++) {
+      pageHTMLArray.push('');
+    }
   }
 
   return pageHTMLArray;
@@ -93,7 +100,7 @@ function writeHTMLFile(arr) {
   });
 }
 
-function objectifyArrForCSV(arr) {
+function objectifyArrForCSV(arr, city) {
   // for some reason Caspio only imports csv with all the fields in it
   // even if the fields are blank. Using just the required fields 
   // to create csv doesn't seem to work because caspio throws error.
@@ -132,7 +139,7 @@ function objectifyArrForCSV(arr) {
     Getting_around_locl_transprt_3:"",
     Getting_around_locl_transprt_4:"",
     overview_local_blogs_news:"",
-    city:"",
+    city: city,
     Name:"",
     Email:"",
     Phone:"",
